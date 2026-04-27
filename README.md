@@ -2,7 +2,7 @@
 
 **Live App:** https://cns-adr-prediction-tb-patients-ydad2zfkvuqvkyta8fwpgp.streamlit.app/
 
-> Predicts neurological adverse drug reactions in TB patients using clinical data — enabling proactive risk stratification during treatment.
+> Predicts neurological adverse drug reactions in TB patients using clinical data, enabling proactive risk stratification during treatment.
 
 ## OVERVIEW
 
