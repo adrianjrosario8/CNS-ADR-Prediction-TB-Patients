@@ -65,7 +65,7 @@ hiv = st.selectbox( "HIV Status", ["Negative", "Positive"])
 hiv = 1 if hiv == "Positive" else 0
 
 tb_test = st.selectbox(
-    "TB Diagnostic Test Result",
+    "TB Diagnostic Method",
     ["Culture", "GeneXpert", "Sputum Smear"]
 )
 
@@ -246,7 +246,7 @@ if st.button("🔍 Predict CNS ADR Risk"):
         )
 
     if age > 60:
-        explanatiopns.append(
+        explanations.append(
             "Older age may increase vulnerability to adverse drug reactions."
         )
 
