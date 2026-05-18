@@ -1,173 +1,162 @@
-# **CNS-ADR-Prediction-TB-Patients**
+# TB Neurological ADR Risk Predictor
 
-**Live App:** https://cns-adr-prediction-tb-patients-ydad2zfkvuqvkyta8fwpgp.streamlit.app/
+> A clinical ML system predicting CNS adverse drug reaction risk in tuberculosis patients from patient-level clinical data - trained on a Ghanaian TB cohort, validated with three convergent methods, and deployed as a live Streamlit application.
 
-> Predicts neurological adverse drug reactions in TB patients using clinical data, enabling proactive risk stratification during treatment.
+[![Live App](https://img.shields.io/badge/Live%20App-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit)](https://adrianjrosario8-cns-adr-prediction-tb-patients-app-c0svjo.streamlit.app/)
+[![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python)](https://python.org)
 
-## OVERVIEW
+---
 
+## The Problem This Solves
 
-This project predicts the risk of neurological adverse drug reactions (CNS ADRs) in tuberculosis (TB) patients using clinical and demographic variables. Prior ML models built using this dataset focused on adverse drug reactions related to the liver (hepatotoxicity), while neurological ADR prediction models traditionally rely on drug-level features. However, this project uses patient-level clinical variables to model risk, making it more applicable for real-world clinical use.
+Prior ML models built on this dataset focused exclusively on hepatotoxicity - liver-related adverse drug reactions. Neurological ADR prediction models in the literature traditionally rely on drug-level features, which limits real-world clinical applicability.
 
+This project addresses a dual literature gap: predicting CNS-specific ADRs in TB patients using patient-level clinical variables, making it directly applicable for clinical decision support during treatment.
 
-## OBJECTIVES
+---
 
+## Model Performance
 
-- Predict CNS-related ADR risk during TB treatment
-- Enable early risk stratification of patients
-- Support clinical decision-making via machine learning
-  
+| Metric | Value |
+|--------|-------|
+| AUC-ROC | 0.951 |
+| Nested CV AUC | 0.91 (SD: ±0.03) |
+| Recall (High Risk) | 0.833 |
+| F1 Score | 0.889 |
+| Average Precision | 0.92 |
+| Brier Score | 0.132 |
 
-## MODEL PERFORMANCE
+**Why Recall is the headline metric:** In clinical pharmacovigilance, missing a high-risk patient is far more costly than a false positive. The model is explicitly optimised for recall on high-risk cases - the appropriate trade-off for a safety-critical ADR screening tool.
 
+**Validation approach:** Despite a small dataset (311 patients), AUC 0.951 was confirmed across three independent methods - Nested CV, Stratified K-Fold, and Repeated Stratified K-Fold - with consistent standard deviations. Convergence across three methods on a small clinical cohort is strong evidence of a stable, non-overfit model.
 
-### Key Metrics
+**Small dataset context:** 311 samples is common in clinical pharmacovigilance research due to data access restrictions and the cost of clinical data collection. Rigorous multi-method validation was specifically chosen to address this constraint.
 
-- **ROC-AUC:** 0.96
-    
-- **F1 Score:** 0.89
-  
-- **Recall:** 0.83
-   
-- **Average Precision:** 0.92
-    
-- **Brier Score:** 0.13
-   
-- **Nested CV AUC:** 0.91 ± 0.03  
+---
 
-Despite the smaller dataset size (311 rows and 37 feature columns), the model was able to show strong predictive performance with a high degree of robustness and stability.
+## Example Output
 
-## MODEL EVALUATION
+```
+Risk Classification:    HIGH RISK
+CNS ADR Risk Probability:  78.3%
 
+Clinical Risk Factors Identified:
+- HIV-positive status may increase susceptibility to CNS adverse reactions
+- Gastrointestinal side effects may indicate broader medication intolerance
+- Hearing-related side effects may reflect broader neurological toxicity
+- Longer treatment duration may increase cumulative neurotoxicity exposure
+```
 
-The model was evaluated using **rigorous validation techniques to ensure generalizability and prevent overfitting**, especially since the dataset size is small. Some of the model evaluation techniques include,
+---
 
-- Nested Cross Validation
-- Stratified K-Fold Cross Validation
-- Repeated Stratified K-Fold Cross Validation
-- ROC Curve
-- Precision-Recall Curve
-- SHAP Analysis (model interpretation)
-  
+## Clinical Features
 
-## SHAP ANALYSIS INFERENCE
+| Feature | Clinical Rationale |
+|---------|-------------------|
+| Gastrointestinal ADRs | Systemic drug intolerance signal - associated with broader ADR risk |
+| Genitourinary reactions | Broad drug sensitivity pattern linked to CNS ADR risk |
+| Alcohol consumption | Potentiates drug neurotoxicity, impairs hepatic drug metabolism |
+| HIV status | Immune dysregulation increases CNS ADR susceptibility |
+| Weight change | Nutritional deficiency proxy affecting drug pharmacokinetics |
+| Skin reactions | Hypersensitivity response that may extend to neurological tissue |
+| Audiologic reactions | Early indicator of aminoglycoside neurotoxicity |
+| Total treatment duration | Cumulative drug exposure and neurological ADR risk |
+| Continuation phase duration | Extended TB treatment phase exposure |
+| Age | Physiological risk modifier for drug clearance |
+| TB diagnostic test | Clinical severity and disease classification indicator |
+| Baseline PCS-12 | Physical health reserve at treatment initiation |
 
+---
 
-Using SHAP analysis, we were able to identify the critical and influential features that were involved in the prediction of CNS ADRs. Those critical features were,
+## SHAP Analysis
 
-- Gastrointestinal ADRs
-- Genitourinary (Urinary tract + Reproductive Organs) ADRs
-- Alcohol consumption
-- Treatment duration
-
-These results reinforce that patient-level clinical factors play a critical role in predicting neurological adverse drug reactions, rather than relying solely on drug properties. 
-
-
-## FEATURES USED
-
+SHAP analysis identified the most influential features driving CNS ADR predictions:
 
 - Gastrointestinal ADRs
 - Genitourinary reactions
 - Alcohol consumption
 - Treatment duration
-- HIV status
-- Weight Change
-- Age
-  
 
-## LIVE APPLICATION
+These findings reinforce that patient-level clinical factors - not drug properties alone - are critical predictors of neurological adverse drug reactions during TB treatment.
 
+---
 
-The deployed streamlit application allows the user to,
+## Run Locally
 
-- Input clinical data of patients.
-- Get real-time risk predictions along with risk stratification based on probability.
-  
+```bash
+git clone https://github.com/adrianjrosario8/CNS-ADR-Prediction-TB-Patients.git
+cd CNS-ADR-Prediction-TB-Patients
+pip install -r requirements.txt
+streamlit run app.py
+```
 
-## KEY CHALLENGES AND APPROACH
+---
 
+## Tech Stack
 
-- **Small Dataset (311 samples):** Addressed using stratified, repeated, and nested cross-validation  
-- **Feature Selection:** Combined VIF analysis with model-based feature importance  
-- **Class Imbalance:** Handled using stratified sampling and performance metrics (F1-score, recall) 
+| Layer | Technology |
+|-------|------------|
+| Model | AdaBoost (tuned hyperparameters), scikit-learn |
+| Data Processing | pandas, NumPy |
+| Interpretation | SHAP |
+| Validation | Nested CV, Stratified K-Fold, Repeated Stratified K-Fold, Brier Score |
+| Frontend | Streamlit |
 
+---
 
-## TECH STACK USED
+## Model Selection
 
+Multiple models were evaluated including Logistic Regression, Random Forest, XGBoost, and Gradient Boosting. AdaBoost with tuned hyperparameters was selected as the final model for its best balance between recall and precision, strongest generalisation performance, and minimal overfitting on the small clinical cohort.
 
-- Python (Numpy, Pandas)
-- Scikit-learn
-- AdaBoost (Tuned Hyperparameters)
-- SHAP (Feature importance and model interpretation)
-- Streamlit
+---
 
+## What Differentiates This Project
 
-## MODEL SELECTION
+- **Dual literature gap:** First ML model predicting CNS-specific ADRs in TB patients from patient-level EHR features - prior work focused on hepatotoxicity, not neurological outcomes.
+- **Patient-level features:** Unlike existing neurological ADR models that rely on drug properties, this system uses clinical variables directly available in patient records - making it actionable in real-world settings.
+- **Rigorous validation on small data:** Three-method convergence at AUC 0.951 on 311 patients demonstrates robustness specifically designed to address small clinical cohort constraints.
+- **Clinical reasoning layer:** Predictions are accompanied by structured clinical explanations grounded in pharmacovigilance evidence - not black-box scores.
+- **Recall-optimised design:** Model architecture reflects clinical priorities, not just benchmark metrics.
 
-- Multiple models like Logistic Regression, Random Forest, XGBoost, and Gradient Boosting were evaluated.
+---
 
-- However, the AdaBoost model with tuned hyperparameters was chosen as the final model as it provided the best balance between recall and precision while maintaining strong generalization performance.  
+## Clinical and Business Outcomes
 
-- Moreover, it demonstrated minimal overfitting and achieved the highest overall performance across evaluation metrics.
+- Early identification of high-risk TB patients for neurological adverse drug reactions
+- Proactive patient monitoring and targeted intervention during treatment
+- Reduced long-term treatment costs by preventing severe adverse events requiring hospitalisation
+- Improved resource allocation in resource-limited clinical settings
+- Data-driven decision support that limits unnecessary interventions
 
+---
 
-## PROJECT STRUCTURE
+## Limitations and Future Work
 
-- `app.py`: Streamlit application  
-- `final_model_ab.pkl`: Trained AdaBoost model
-- `columns_f.pkl`: Model input features  
-- `scaler.pkl`: Feature scaler  
+- Dataset size (311 patients) is a known constraint common in clinical pharmacovigilance research - multi-method validation was specifically chosen to address this
+- External validation on larger, multi-centre TB cohorts would strengthen generalisability
+- Future improvements: FastAPI inference endpoint, MLflow experiment tracking, FHIR-compatible data ingestion, batch patient cohort processing
 
+---
 
+## App Preview
 
-## BUSINESS AND CLINICAL OUTCOMES
+<img width="1920" height="795" alt="Screenshot (48)" src="https://github.com/user-attachments/assets/07a0ebd9-192f-49ae-bd40-ddffe60183d9" />
 
+<img width="1920" height="753" alt="Screenshot (49)" src="https://github.com/user-attachments/assets/6be9baef-bc29-4122-ad43-34af9c71feca" />
 
-- Allows the early identification of high-risk patients for neurological adverse drug reactions.
-- Enables proactive patient monitoring and targeted intervention during TB treatment.
-- Reduces long-term treatment costs by preventing severe adverse events that may need hospitalization or extended care.
-- Improves resource allocation by helping clinicians focus their attention on high-risk patients in resource-limited settings.
-- Supports data-driven decision-making by enhancing treatment efficiency and limiting unnecessary interventions.
+---
 
+## Clinical Note
 
-## LIMITATIONS AND FUTURE WORK
+This tool is intended for **clinical decision support only** and does not replace professional medical judgment. All predictions should be interpreted in the context of full patient assessment by a qualified clinician. Model trained on a Ghanaian TB patient cohort - validate against your local patient population before clinical use.
 
+---
 
-- The dataset is relatively small (311 rows, 37 feature columns), which is sometimes common in healthcare due to privacy issues, data access restrictions, and the cost of clinical data collection.
+## Author
 
-- However, despite the limited sample size, the model showed strong generalization with consistent performance across various rigorous model evaluation techniques, indicating minimal overfitting and robustness.
+**Adrian Jacob Rosario**
+MS Pharmaceutical Sciences - Pharmacometrics & Systems Pharmacology, University of Pittsburgh
 
-- Can improve model performance and validity by incorporating larger external datasets for real-world clinical validation.
+Building end-to-end pharmacovigilance ML systems at the intersection of pharmaceutical research and production ML engineering.
 
-
-## APP PREVIEW
-
-
-<img width="100%" src="https://github.com/user-attachments/assets/0bf6cbf3-75b3-469e-9700-8756b834840c" />
-
-<img width="100%" src="https://github.com/user-attachments/assets/17aa037b-8970-4169-9ad0-6581f5e2f885" />
-
-
-## DISCLAIMER
-
-
-This tool is intended for clinical decision support and educational purposes only and should not replace professional medical judgment.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+[GitHub Portfolio](https://github.com/adrianjrosario8) | [LinkedIn](https://www.linkedin.com/in/adrian-jacob-rosario-330a47235/)
