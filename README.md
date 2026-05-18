@@ -21,6 +21,8 @@ This project addresses a dual literature gap: predicting CNS-specific ADRs in TB
 |--------|-------|
 | AUC-ROC | 0.951 |
 | Nested CV AUC | 0.91 (SD: ±0.03) |
+| Repeated Stratified K-Fold AUC | 0.91 |
+| Stratified K-Fold AUC | 0.90 |
 | Recall (High Risk) | 0.833 |
 | F1 Score | 0.889 |
 | Average Precision | 0.92 |
