@@ -1,10 +1,10 @@
-import os
 import streamlit as st
 
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from sentence_transformers import SentenceTransformer
 from langchain_community.vectorstores import FAISS
+
 
 
 # API KEY
@@ -28,7 +28,9 @@ llm = ChatGroq(
 # EMBEDDINGS
 
 
-embedder = SentenceTransformer("all-MiniLM-L6-v2")
+embedder = SentenceTransformer(
+    "all-MiniLM-L6-v2"
+)
 
 
 
@@ -43,7 +45,7 @@ vectorstore = FAISS.load_local(
 
 
 
-# PROMPT
+# PROMPT TEMPLATE
 
 
 prompt = PromptTemplate(
@@ -88,14 +90,17 @@ Safety Note (No Diagnosis):
 )
 
 
+
 # MAIN FUNCTION
 
 
 def generate_clinical_rationale(query):
 
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    retriever = vectorstore.as_retriever(
+        search_kwargs={"k": 3}
+    )
 
-    docs = retriever.get_relevant_documents(query)
+    docs = retriever.invoke(query)
 
     context = "\n\n".join([
         doc.page_content for doc in docs
