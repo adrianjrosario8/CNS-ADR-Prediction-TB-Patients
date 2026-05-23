@@ -1,6 +1,6 @@
 import os
-import pickle
 import json
+import pickle
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
@@ -10,7 +10,10 @@ from sentence_transformers import SentenceTransformer
 from langchain_community.vectorstores import FAISS
 from langchain.embeddings.base import Embeddings
 
-# File Paths
+
+
+# PATHS
+
 
 CORPUS_PATH = "data/pubmed_tb_adr.json"
 
@@ -18,118 +21,124 @@ VECTOR_STORE_PATH = "vector_store/faiss_index"
 
 METADATA_PATH = "vector_store/metadata.pkl"
 
-# Load Embedding Model
 
-embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+# EMBEDDING MODEL
 
-# Custom Langchain Embedding Class
+
+embedding_model = SentenceTransformer(
+    "sentence-transformers/all-MiniLM-L6-v2"
+)
+
 
 class SentenceTransformerEmbeddings(Embeddings):
-    
+
     def embed_documents(self, texts):
-        
+
         embeddings = embedding_model.encode(texts)
-        
+
         return embeddings.tolist()
-    
+
     def embed_query(self, text):
-        
+
         embedding = embedding_model.encode(text)
-        
+
         return embedding.tolist()
-    
+
+
 embedding_function = SentenceTransformerEmbeddings()
 
-# Load Corpus
+
+
+# LOAD CORPUS
+
 
 with open(CORPUS_PATH, "r", encoding="utf-8") as f:
-    
+
     papers = json.load(f)
-    
+
 print(f"\nLoaded {len(papers)} papers.")
 
-# Conversion to documents
+
+# CONVERT TO DOCUMENTS
+
 
 documents = []
 
 for paper in papers:
-    
+
+    title = paper.get("title", "")
+    abstract = paper.get("abstract", "")
+    pmid = paper.get("pmid", "Unknown")
+
     text = f"""
-    
-    Title: {paper['title']}
-    
-    Abstract: {paper['abstract']}
-    
-    """
+Title: {title}
+
+Abstract:
+{abstract}
+"""
+
     doc = Document(
-
         page_content=text,
-
         metadata={
-            "pmid": paper["pmid"],
-            "title": paper["title"]
+            "pmid": pmid,
+            "title": title
         }
     )
 
     documents.append(doc)
-    
-print(f"Converted {len(documents)} papers into Langchain documents.")
 
-# Chunk Documents
+print(f"Converted {len(documents)} papers into documents.")
+
+
+
+# CHUNKING
+
 
 text_splitter = RecursiveCharacterTextSplitter(
-    
     chunk_size=500,
-    
-    chunk_overlap = 100
+    chunk_overlap=100
 )
 
 split_docs = text_splitter.split_documents(documents)
 
-print(f"Created {len(split_docs)} text chunks.")
+print(f"Created {len(split_docs)} chunks.")
 
-# Create FAISS vector store
+
+
+# CREATE VECTOR STORE
+
 
 vectorstore = FAISS.from_documents(
     split_docs,
-    
     embedding_function
 )
 
-print("FAISS vector store created")
+print("FAISS vector store created.")
 
-# Create Output Directory
 
-os.makedirs("../vector_store", exist_ok=True)
 
-# Save Vector Store
+# SAVE VECTOR STORE
+
+
+os.makedirs("vector_store", exist_ok=True)
 
 vectorstore.save_local(VECTOR_STORE_PATH)
 
-print(f"FAISS index saved to: {VECTOR_STORE_PATH}")
+print(f"Saved vector DB to: {VECTOR_STORE_PATH}")
 
-# Save metadta
+
+# SAVE METADATA
 
 metadata = [
     {
         "content": doc.page_content,
         "metadata": doc.metadata
     }
-    
     for doc in split_docs
 ]
 
 with open(METADATA_PATH, "wb") as f:
-    
-    pickle.dump(metadata, f)
-  
-print(f"Metadata saved to: {METADATA_PATH}")
-                   
-                   
-                  
-                   
-                   
-        
-        
-            
 
+    pickle.dump(metadata, f)
+
+print(f"Metadata saved to: {METADATA_PATH}")
