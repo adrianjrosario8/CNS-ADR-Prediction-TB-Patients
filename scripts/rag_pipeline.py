@@ -6,9 +6,7 @@ from langchain_core.prompts import PromptTemplate
 from sentence_transformers import SentenceTransformer
 from langchain_community.vectorstores import FAISS
 
-# =========================
-# API KEY HANDLING (SAFE)
-# =========================
+# API KEY HANDLING
 
 GROQ_API_KEY = (
     st.secrets.get("GROQ_API_KEY", None)
@@ -21,9 +19,8 @@ if not GROQ_API_KEY:
         "GROQ_API_KEY not found. Add it in Streamlit secrets or environment variables."
     )
 
-# =========================
 # LLM INITIALIZATION
-# =========================
+
 
 llm = ChatGroq(
     groq_api_key=GROQ_API_KEY,
@@ -31,15 +28,14 @@ llm = ChatGroq(
     temperature=0.2
 )
 
-# =========================
+
 # EMBEDDING MODEL
-# =========================
+
 
 embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
-# =========================
 # PROMPT TEMPLATE
-# =========================
+
 
 prompt = PromptTemplate(
     input_variables=["context", "question"],
@@ -47,7 +43,8 @@ prompt = PromptTemplate(
 You are a clinical pharmacology assistant.
 
 Use ONLY the provided context to answer.
-If context is insufficient, clearly state: "No sufficient evidence retrieved."
+If context is insufficient, clearly state:
+"No sufficient evidence retrieved."
 
 Context:
 {context}
@@ -61,16 +58,18 @@ Provide:
 3. Population-level interpretation
 4. Safety note (no diagnosis)
 5. References (only if present in context)
+
+Do NOT invent PMIDs, studies, citations, or statistics.
 """
 )
 
-# =========================
-# VECTOR DB (SAFE LOAD)
-# =========================
+# VECTOR DB LOAD
+
 
 def load_vectorstore(path="faiss_index"):
     if not os.path.exists(path):
         return None
+
     return FAISS.load_local(
         path,
         embedder,
@@ -79,55 +78,92 @@ def load_vectorstore(path="faiss_index"):
 
 vectorstore = load_vectorstore()
 
-# =========================
-# MAIN FUNCTION (CLEAN)
-# =========================
+# MAIN FUNCTION
+
 
 def generate_clinical_rationale(query: str):
-    """
-    Returns structured clinical rationale from retrieved evidence.
-    """
 
-    # -------------------------
-    # Guard: missing vector DB
-    # -------------------------
+
+    # Missing vector DB
+
+
     if vectorstore is None:
-        return "No evidence base available (FAISS index missing)."
+        return (
+            "No evidence base available (FAISS index missing).",
+            []
+        )
+
+    # Retrieve documents
+
 
     retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+
     docs = retriever.get_relevant_documents(query)
 
-    # -------------------------
-    # Guard: empty retrieval
-    # -------------------------
+    # Empty retrieval guard
+  
     if not docs or len(docs) == 0:
         return (
             "No relevant evidence retrieved from knowledge base. "
-            "Unable to generate literature-backed clinical rationale."
+            "Unable to generate literature-backed clinical rationale.",
+            []
         )
 
-    context = "\n\n".join([doc.page_content for doc in docs])
+    # Build context
 
-    # -------------------------
-    # LLM call
-    # -------------------------
+
+    context = "\n\n".join([
+        doc.page_content for doc in docs
+    ])
+
+  
+    # Generate response
+  
+
     response = llm.invoke(
-        prompt.format(context=context, question=query)
+        prompt.format(
+            context=context,
+            question=query
+        )
     )
 
-    # -------------------------
-    # Clean output (avoid duplicates / artifacts)
-    # -------------------------
     output = response.content.strip()
 
-    # Remove accidental repeated blocks (simple dedupe safeguard)
+  
+    # Remove duplicate lines
+
+
     lines = output.split("\n")
-    seen = set()
+
     cleaned = []
+    seen = set()
 
     for line in lines:
-        if line.strip() not in seen:
-            cleaned.append(line)
-            seen.add(line.strip())
+        stripped = line.strip()
 
-    return "\n".join(cleaned)
+        if stripped and stripped not in seen:
+            cleaned.append(line)
+            seen.add(stripped)
+
+    final_output = "\n".join(cleaned)
+
+    # Extract references safely
+
+
+    references = []
+
+    for doc in docs:
+
+        metadata = getattr(doc, "metadata", {})
+
+        if "source" in metadata:
+            references.append(metadata["source"])
+
+        elif "pmid" in metadata:
+            references.append(f"PMID {metadata['pmid']}")
+
+    # Remove duplicates
+    
+    references = list(set(references))
+
+    return final_output, references

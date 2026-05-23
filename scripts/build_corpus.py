@@ -130,9 +130,8 @@ def main():
 
     print(f"\nTotal unique papers collected: {len(final_papers)}")
 
-    # -----------------------------
+
     # Save to JSON
-    # -----------------------------
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
 
