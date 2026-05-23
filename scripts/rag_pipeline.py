@@ -1,14 +1,13 @@
 import os
 import streamlit as st
 from langchain_community.vectorstores import FAISS
-from langchain.chains import RetrievalQA
+from langchain.embeddings.base import Embeddings
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
-from langchain.embeddings.base import Embeddings
+from langchain.chains.question_answering import load_qa_chain
 from sentence_transformers import SentenceTransformer
 
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-
 VECTOR_STORE_PATH = "vector_store/faiss_index"
 
 # EMBEDDING MODEL
@@ -42,7 +41,7 @@ provide a concise evidence-based clinical interpretation for a TB patient with t
 {question}
 
 Structure your response as:
-1. Key TB-CNS Associations (cite specific findings from the literature with statistics if available)
+1. Key TB-CNS Associations (cite specific findings with statistics if available)
 2. Literature Summary (drug safety focus)
 3. Population-Level Interpretation
 4. Safety Note (no diagnosis, monitoring recommendations only)
@@ -61,7 +60,7 @@ prompt = PromptTemplate(
 # RAG CHAIN
 
 def generate_clinical_rationale(patient_summary: str):
-    
+
     vectorstore = load_vectorstore()
 
     llm = ChatGroq(
@@ -72,10 +71,10 @@ def generate_clinical_rationale(patient_summary: str):
 
     retriever = vectorstore.as_retriever(
         search_type="similarity",
-        search_kwargs={"k": 5}
+        search_kwargs={"k": 3}
     )
 
-    # Retrieve docs and deduplicate by PMID
+    # Retrieve and deduplicate by PMID
     raw_docs = retriever.get_relevant_documents(patient_summary)
 
     seen_pmids = set()
@@ -92,30 +91,16 @@ def generate_clinical_rationale(patient_summary: str):
                 "title": doc.metadata.get("title", "")
             })
 
-    # Build context from deduplicated docs
+    # Truncate context to stay within token limit
     context = "\n\n".join([doc.page_content for doc in unique_docs])
+    if len(context) > 3000:
+        context = context[:3000]
 
-    # Build chain with deduplicated context
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=vectorstore.as_retriever(search_kwargs={"k": 1}),
-        chain_type_kwargs={"prompt": prompt},
-        return_source_documents=False
-    )
+    # Manually build prompt and call LLM directly
+    filled_prompt = PROMPT_TEMPLATE.replace("{question}", patient_summary).replace("{context}", context)
 
-    # Run with manually constructed context
-    from langchain.chains.question_answering import load_qa_chain
-    
-    doc_chain = load_qa_chain(
-        llm,
-        chain_type="stuff",
-        prompt=prompt
-    )
-
-    result = doc_chain.run(
-        input_documents=unique_docs,
-        question=patient_summary
-    )
+    from langchain.schema import HumanMessage
+    response = llm([HumanMessage(content=filled_prompt)])
+    result = response.content
 
     return result, sources
