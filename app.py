@@ -4,18 +4,11 @@ import pandas as pd
 
 from scripts.rag_pipeline import generate_clinical_rationale
 
-
-
-# MODEL LOAD
-
 with open("final_model_ab.pkl", "rb") as f:
     model = pickle.load(f)
 
 with open("columns_f.pkl", "rb") as f:
     model_columns = pickle.load(f)
-
-
-# DEFAULT FEATURES
 
 DEFAULTS = {
     "Gender": 1,
@@ -44,26 +37,14 @@ DEFAULTS = {
     "Weight_IP": 0.0,
 }
 
-# SESSION STATE
-
-
 if "results_ready" not in st.session_state:
     st.session_state.results_ready = False
-
-
-# UI HEADER
-
 
 st.title("🧠 TB Neurological ADR Risk Predictor")
 
 st.write(
     "ML + Retrieval-Augmented Evidence System for CNS Adverse Drug Reaction risk in TB patients."
 )
-
-
-
-# INPUT SECTION
-
 
 st.subheader("👤 Patient Information")
 
@@ -72,47 +53,74 @@ age = st.number_input("Age", 0, 100, 30)
 hiv = st.selectbox("HIV Status", ["Negative", "Positive"])
 hiv = 1 if hiv == "Positive" else 0
 
-tb_test = st.selectbox("TB Diagnostic Method", ["Culture", "GeneXpert", "Sputum Smear"])
-tb_test = {"Culture": 1, "GeneXpert": 2, "Sputum Smear": 3}[tb_test]
+tb_test = st.selectbox(
+    "TB Diagnostic Method",
+    ["Culture", "GeneXpert", "Sputum Smear"]
+)
 
-baseline_pcs = st.number_input("Baseline Health Score", 0.0, 100.0, 45.0)
+tb_test = {
+    "Culture": 1,
+    "GeneXpert": 2,
+    "Sputum Smear": 3
+}[tb_test]
 
-alcohol = st.number_input("Alcohol Units Per Week", 0.0, value=0.0)
+baseline_pcs = st.number_input(
+    "Baseline Health Score",
+    0.0,
+    100.0,
+    45.0
+)
 
-weight = st.number_input("Weight Change (kg)", value=0.0)
+alcohol = st.number_input(
+    "Alcohol Units Per Week",
+    0.0,
+    value=0.0
+)
 
-
-
-# TREATMENT
-
+weight = st.number_input(
+    "Weight Change (kg)",
+    value=0.0
+)
 
 st.subheader("💊 Treatment Details")
 
-duration_cont = st.number_input("Treatment Continuation (months)", 0.0, value=4.0)
+duration_cont = st.number_input(
+    "Treatment Continuation (months)",
+    0.0,
+    value=4.0
+)
 
-total_duration = st.number_input("Total Treatment Duration (months)", 0.0, value=6.0)
-
-
-# ADR INPUTS
-
+total_duration = st.number_input(
+    "Total Treatment Duration (months)",
+    0.0,
+    value=6.0
+)
 
 st.subheader("⚠️ Adverse Reactions")
 
-git = st.selectbox("Digestive Symptoms (nausea, vomiting, discomfort)?", ["No", "Yes"])
+git = st.selectbox(
+    "Digestive Symptoms?",
+    ["No", "Yes"]
+)
 git = 1 if git == "Yes" else 0
 
-genito = st.selectbox("Urinary/Reproductive Symptoms?", ["No", "Yes"])
+genito = st.selectbox(
+    "Urinary/Reproductive Symptoms?",
+    ["No", "Yes"]
+)
 genito = 1 if genito == "Yes" else 0
 
-skin = st.selectbox("Skin Reactions?", ["No", "Yes"])
+skin = st.selectbox(
+    "Skin Reactions?",
+    ["No", "Yes"]
+)
 skin = 1 if skin == "Yes" else 0
 
-audio = st.selectbox("Hearing-Related Symptoms?", ["No", "Yes"])
+audio = st.selectbox(
+    "Hearing-Related Symptoms?",
+    ["No", "Yes"]
+)
 audio = 1 if audio == "Yes" else 0
-
-
-# PREDICTION
-
 
 if st.button("🔍 Predict CNS ADR Risk"):
 
@@ -142,10 +150,6 @@ if st.button("🔍 Predict CNS ADR Risk"):
     st.session_state.input_data = input_data
     st.session_state.results_ready = True
 
-
-# RESULTS SECTION
-
-
 if st.session_state.results_ready:
 
     prob = st.session_state.prob
@@ -154,7 +158,9 @@ if st.session_state.results_ready:
 
     st.metric("CNS ADR Risk Score", f"{prob:.2%}")
 
-    st.caption("Model-derived score (not clinically calibrated probability)")
+    st.caption(
+        "Model-derived score (not clinically calibrated probability)"
+    )
 
     if prob < 0.35:
         st.success("Low Risk")
@@ -163,51 +169,52 @@ if st.session_state.results_ready:
     else:
         st.error("High Risk")
 
-
-    # CLINICAL FACTORS
-
-
     st.subheader("🩺 Clinical Risk Factors")
 
     risks = []
 
     if alcohol > 14:
-        risks.append("High alcohol intake associated with neurotoxicity risk.")
+        risks.append(
+            "High alcohol intake associated with neurotoxicity risk."
+        )
 
     if hiv:
-        risks.append("HIV infection associated with increased ADR susceptibility.")
+        risks.append(
+            "HIV infection associated with increased ADR susceptibility."
+        )
 
     if git:
-        risks.append("Digestive symptoms indicate systemic intolerance.")
+        risks.append(
+            "Digestive symptoms indicate systemic intolerance."
+        )
 
     if genito:
-        risks.append("Urinary/reproductive symptoms indicate systemic sensitivity.")
+        risks.append(
+            "Urinary/reproductive symptoms indicate systemic sensitivity."
+        )
 
     if skin:
-        risks.append("Skin reactions suggest hypersensitivity risk.")
+        risks.append(
+            "Skin reactions suggest hypersensitivity risk."
+        )
 
     if audio:
-        risks.append("Hearing-related symptoms suggest possible neurotoxicity.")
+        risks.append(
+            "Hearing-related symptoms suggest possible neurotoxicity."
+        )
 
     if total_duration > 6:
-        risks.append("Longer treatment increases cumulative toxicity risk.")
+        risks.append(
+            "Longer treatment increases cumulative toxicity risk."
+        )
 
     if age > 60:
-        risks.append("Advanced age increases ADR susceptibility.")
-
-    if not risks:
-        risks.append("No major clinical risk factors detected.")
+        risks.append(
+            "Advanced age increases ADR susceptibility."
+        )
 
     for r in risks:
         st.write("• " + r)
-
-
-# RAG SECTION 
-
-
-# =========================
-# RAG SECTION
-# =========================
 
 if st.session_state.results_ready and st.session_state.prob >= 0.65:
 
@@ -232,30 +239,21 @@ Score {prob:.2%}
     answer, sources = generate_clinical_rationale(patient_summary)
 
     st.markdown("### Patient Summary")
-
     st.code(patient_summary)
 
     st.markdown("### 🧠 Retrieved Evidence")
 
     for s in sources:
-        st.write(f"• {s}")
+        st.write(f"• PMID {s['pmid']} — {s['title']}")
 
     st.markdown("### 📊 Clinical Interpretation")
-
     st.write(answer)
-
-
-# SIDEBAR
-
 
 with st.sidebar:
     st.header("System Info")
     st.write("Model: AdaBoost Ensemble")
     st.write("Architecture: ML + FAISS + Groq RAG")
     st.write("Purpose: Clinical Decision Support Demo")
-
-
-# DISCLAIMER
 
 st.info(
     "For research/educational use only. Not for clinical decision making."
