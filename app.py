@@ -5,9 +5,8 @@ import pandas as pd
 from scripts.rag_pipeline import generate_clinical_rationale
 
 
-# =========================
+
 # MODEL LOAD
-# =========================
 
 with open("final_model_ab.pkl", "rb") as f:
     model = pickle.load(f)
@@ -16,9 +15,7 @@ with open("columns_f.pkl", "rb") as f:
     model_columns = pickle.load(f)
 
 
-# =========================
 # DEFAULT FEATURES
-# =========================
 
 DEFAULTS = {
     "Gender": 1,
@@ -47,18 +44,15 @@ DEFAULTS = {
     "Weight_IP": 0.0,
 }
 
-
-# =========================
 # SESSION STATE
-# =========================
+
 
 if "results_ready" not in st.session_state:
     st.session_state.results_ready = False
 
 
-# =========================
 # UI HEADER
-# =========================
+
 
 st.title("🧠 TB Neurological ADR Risk Predictor")
 
@@ -67,9 +61,9 @@ st.write(
 )
 
 
-# =========================
+
 # INPUT SECTION
-# =========================
+
 
 st.subheader("👤 Patient Information")
 
@@ -88,9 +82,9 @@ alcohol = st.number_input("Alcohol Units Per Week", 0.0, value=0.0)
 weight = st.number_input("Weight Change (kg)", value=0.0)
 
 
-# =========================
+
 # TREATMENT
-# =========================
+
 
 st.subheader("💊 Treatment Details")
 
@@ -99,9 +93,8 @@ duration_cont = st.number_input("Treatment Continuation (months)", 0.0, value=4.
 total_duration = st.number_input("Total Treatment Duration (months)", 0.0, value=6.0)
 
 
-# =========================
 # ADR INPUTS
-# =========================
+
 
 st.subheader("⚠️ Adverse Reactions")
 
@@ -118,9 +111,8 @@ audio = st.selectbox("Hearing-Related Symptoms?", ["No", "Yes"])
 audio = 1 if audio == "Yes" else 0
 
 
-# =========================
 # PREDICTION
-# =========================
+
 
 if st.button("🔍 Predict CNS ADR Risk"):
 
@@ -151,9 +143,8 @@ if st.button("🔍 Predict CNS ADR Risk"):
     st.session_state.results_ready = True
 
 
-# =========================
 # RESULTS SECTION
-# =========================
+
 
 if st.session_state.results_ready:
 
@@ -173,9 +164,8 @@ if st.session_state.results_ready:
         st.error("High Risk")
 
 
-    # =========================
     # CLINICAL FACTORS
-    # =========================
+
 
     st.subheader("🩺 Clinical Risk Factors")
 
@@ -212,9 +202,8 @@ if st.session_state.results_ready:
         st.write("• " + r)
 
 
-# =========================
-# RAG SECTION (CLEAN + CONTROLLED)
-# =========================
+# RAG SECTION 
+
 
 if st.session_state.results_ready and st.session_state.prob >= 0.65:
 
@@ -247,15 +236,14 @@ Score {prob:.2%}
 
     with st.expander("🧠 Retrieved Evidence"):
         for s in sources:
-            st.write(f"• PMID {s['pmid']} — {s['title']}")
+            st.write(f"• {s}")
 
     with st.expander("📊 Clinical Interpretation"):
         st.write(answer)
 
 
-# =========================
 # SIDEBAR
-# =========================
+
 
 with st.sidebar:
     st.header("System Info")
@@ -264,9 +252,7 @@ with st.sidebar:
     st.write("Purpose: Clinical Decision Support Demo")
 
 
-# =========================
 # DISCLAIMER
-# =========================
 
 st.info(
     "For research/educational use only. Not for clinical decision making."
