@@ -4,7 +4,10 @@ from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 from langchain_community.vectorstores import FAISS
 from langchain.embeddings.base import Embeddings
-from langchain_groq import ChatGroq
+try:
+    from langchain_groq import ChatGroq
+except ImportError:
+    from langchain_groq.chat_models import ChatGroq
 from langchain_core.prompts import PromptTemplate
 
 

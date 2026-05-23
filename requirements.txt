@@ -7,18 +7,12 @@ xgboost
 langchain
 langchain-community
 langchain-core
+
 langchain-groq
-
-faiss-cpu
-
-sentence-transformers
-transformers
-
-torch==2.1.2
-
 groq
 
-biopython
-python-dotenv
+faiss-cpu
+sentence-transformers
 
-pickle-mixin
+python-dotenv
+biopython
