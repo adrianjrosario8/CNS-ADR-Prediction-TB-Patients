@@ -1,60 +1,28 @@
 import os
-from dotenv import load_dotenv
+import streamlit as st
 
+from langchain_groq import ChatGroq
+from langchain_core.prompts import PromptTemplate
 from sentence_transformers import SentenceTransformer
 from langchain_community.vectorstores import FAISS
-from langchain.embeddings.base import Embeddings
-try:
-    from langchain_groq import ChatGroq
-except ImportError:
-    from langchain_groq.chat_models import ChatGroq
-from langchain_core.prompts import PromptTemplate
-
 
 # =========================
-# ENV SETUP
+# API KEY HANDLING (SAFE)
 # =========================
 
-load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-
-# =========================
-# EMBEDDINGS MODEL
-# =========================
-
-model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-
-
-class EmbeddingWrapper(Embeddings):
-    def embed_documents(self, texts):
-        return model.encode(texts).tolist()
-
-    def embed_query(self, text):
-        return model.encode(text).tolist()
-
-
-embedding_function = EmbeddingWrapper()
-
-
-# =========================
-# LOAD VECTOR DB
-# =========================
-
-vectorstore = FAISS.load_local(
-    "vector_store/faiss_index",
-    embedding_function,
-    allow_dangerous_deserialization=True
+GROQ_API_KEY = (
+    st.secrets.get("GROQ_API_KEY", None)
+    if hasattr(st, "secrets")
+    else os.getenv("GROQ_API_KEY")
 )
 
-retriever = vectorstore.as_retriever(
-    search_type="similarity",
-    search_kwargs={"k": 3}
-)
-
+if not GROQ_API_KEY:
+    raise ValueError(
+        "GROQ_API_KEY not found. Add it in Streamlit secrets or environment variables."
+    )
 
 # =========================
-# LLM
+# LLM INITIALIZATION
 # =========================
 
 llm = ChatGroq(
@@ -63,110 +31,103 @@ llm = ChatGroq(
     temperature=0.2
 )
 
+# =========================
+# EMBEDDING MODEL
+# =========================
+
+embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
 # =========================
-# PROMPT (CONTROLLED DOMAIN)
+# PROMPT TEMPLATE
 # =========================
 
 prompt = PromptTemplate(
+    input_variables=["context", "question"],
     template="""
-You are a biomedical literature assistant specialized in:
+You are a clinical pharmacology assistant.
 
-- Tuberculosis treatment
-- CNS adverse drug reactions
-- TB pharmacovigilance literature
+Use ONLY the provided context to answer.
+If context is insufficient, clearly state: "No sufficient evidence retrieved."
 
-RULES:
-- Use ONLY retrieved evidence
-- Focus on TB drug-related CNS toxicity
-- Avoid unrelated epidemiology or HIV-only studies unless drug-related
-- Do not hallucinate missing studies
-
-Patient:
-{question}
-
-Evidence:
+Context:
 {context}
 
-OUTPUT:
+Question:
+{question}
+
+Provide:
 1. Key TB drug–CNS toxicity associations
 2. Literature summary (drug safety focus)
 3. Population-level interpretation
 4. Safety note (no diagnosis)
-""",
-    input_variables=["question", "context"]
+5. References (only if present in context)
+"""
 )
 
-
 # =========================
-# MAIN RAG FUNCTION
+# VECTOR DB (SAFE LOAD)
 # =========================
 
-def generate_clinical_rationale(patient_summary):
-
-    raw_docs = retriever.invoke(patient_summary)
-
-    # =========================
-    # BALANCED FILTER (FIXED)
-    # =========================
-
-    KEYWORDS = [
-        "adverse",
-        "toxicity",
-        "reaction",
-        "neurolog",
-        "nervous",
-        "cns",
-        "central",
-        "tb",
-        "tuberculosis",
-        "isoniazid",
-        "rifampicin",
-        "ethambutol",
-        "pyrazinamide",
-        "drug",
-        "treatment",
-        "pharmac"
-    ]
-
-    docs = [
-        d for d in raw_docs
-        if any(k in d.page_content.lower() for k in KEYWORDS)
-    ]
-
-    # =========================
-    # FALLBACK (IMPORTANT FIX)
-    # =========================
-
-    if not docs:
-        docs = raw_docs[:3]
-
-    # =========================
-    # BUILD CONTEXT
-    # =========================
-
-    context = "\n\n".join(
-        d.page_content for d in docs
-    ) if docs else "No relevant literature retrieved."
-
-    # =========================
-    # LLM CALL
-    # =========================
-
-    response = llm.invoke(
-        prompt.format(question=patient_summary, context=context)
+def load_vectorstore(path="faiss_index"):
+    if not os.path.exists(path):
+        return None
+    return FAISS.load_local(
+        path,
+        embedder,
+        allow_dangerous_deserialization=True
     )
 
-    # =========================
-    # SOURCES
-    # =========================
+vectorstore = load_vectorstore()
 
-    sources = [
-        {
-            "title": d.metadata.get("title", "Unknown"),
-            "pmid": d.metadata.get("pmid", "Unknown")
-        }
-        for d in docs
-    ]
+# =========================
+# MAIN FUNCTION (CLEAN)
+# =========================
 
-    return response.content, sources
+def generate_clinical_rationale(query: str):
+    """
+    Returns structured clinical rationale from retrieved evidence.
+    """
+
+    # -------------------------
+    # Guard: missing vector DB
+    # -------------------------
+    if vectorstore is None:
+        return "No evidence base available (FAISS index missing)."
+
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    docs = retriever.get_relevant_documents(query)
+
+    # -------------------------
+    # Guard: empty retrieval
+    # -------------------------
+    if not docs or len(docs) == 0:
+        return (
+            "No relevant evidence retrieved from knowledge base. "
+            "Unable to generate literature-backed clinical rationale."
+        )
+
+    context = "\n\n".join([doc.page_content for doc in docs])
+
+    # -------------------------
+    # LLM call
+    # -------------------------
+    response = llm.invoke(
+        prompt.format(context=context, question=query)
+    )
+
+    # -------------------------
+    # Clean output (avoid duplicates / artifacts)
+    # -------------------------
+    output = response.content.strip()
+
+    # Remove accidental repeated blocks (simple dedupe safeguard)
+    lines = output.split("\n")
+    seen = set()
+    cleaned = []
+
+    for line in lines:
+        if line.strip() not in seen:
+            cleaned.append(line)
+            seen.add(line.strip())
+
+    return "\n".join(cleaned)

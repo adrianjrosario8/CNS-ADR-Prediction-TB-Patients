@@ -8,6 +8,8 @@ langchain
 langchain-community
 langchain-core
 
+torchvision
+
 langchain-groq
 groq
 
