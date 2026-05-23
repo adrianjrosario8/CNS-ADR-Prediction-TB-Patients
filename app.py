@@ -205,13 +205,13 @@ if st.session_state.results_ready:
 # RAG SECTION 
 
 
+# =========================
+# RAG SECTION
+# =========================
+
 if st.session_state.results_ready and st.session_state.prob >= 0.65:
 
     st.subheader("📚 Evidence-Based Clinical Insights")
-
-    st.info(
-        "Literature-based associations only. No diagnostic interpretation."
-    )
 
     data = st.session_state.input_data
     prob = st.session_state.prob
@@ -231,15 +231,18 @@ Score {prob:.2%}
 
     answer, sources = generate_clinical_rationale(patient_summary)
 
-    with st.expander("🧾 Patient Summary"):
-        st.code(patient_summary, language="text")
+    st.markdown("### Patient Summary")
 
-    with st.expander("🧠 Retrieved Evidence"):
-        for s in sources:
-            st.write(f"• {s}")
+    st.code(patient_summary)
 
-    with st.expander("📊 Clinical Interpretation"):
-        st.write(answer)
+    st.markdown("### 🧠 Retrieved Evidence")
+
+    for s in sources:
+        st.write(f"• {s}")
+
+    st.markdown("### 📊 Clinical Interpretation")
+
+    st.write(answer)
 
 
 # SIDEBAR
