@@ -1,10 +1,8 @@
-import os
 import streamlit as st
 from langchain_community.vectorstores import FAISS
 from langchain.embeddings.base import Embeddings
 from langchain_groq import ChatGroq
-from langchain.prompts import PromptTemplate
-from langchain.chains.question_answering import load_qa_chain
+from langchain.schema import HumanMessage
 from sentence_transformers import SentenceTransformer
 
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
@@ -32,32 +30,24 @@ def load_vectorstore():
         allow_dangerous_deserialization=True
     )
 
-# PROMPT
+# PROMPT — kept short deliberately to stay within token budget
 
-PROMPT_TEMPLATE = """
-You are a clinical pharmacovigilance assistant. Using only the retrieved literature below,
-provide a concise evidence-based clinical interpretation for a TB patient with the following profile:
+PROMPT_TEMPLATE = """You are a clinical pharmacovigilance assistant.
 
+Patient profile:
 {question}
 
-Structure your response as:
-1. Key TB-CNS Associations (cite specific findings with statistics if available)
-2. Literature Summary (drug safety focus)
-3. Population-Level Interpretation
-4. Safety Note (no diagnosis, monitoring recommendations only)
-
-Base your response strictly on the provided context. Do not fabricate statistics or references.
-
-Context:
+Retrieved literature:
 {context}
-"""
 
-prompt = PromptTemplate(
-    template=PROMPT_TEMPLATE,
-    input_variables=["context", "question"]
-)
+Using only the retrieved literature above, write a brief clinical interpretation with:
+1. Key TB-CNS associations (include statistics if present in the literature)
+2. Literature summary (drug safety focus)
+3. Population-level interpretation
+4. Safety note (monitoring recommendations only, no diagnosis)
 
-# RAG CHAIN
+If the literature does not contain relevant information, say so clearly. Do not fabricate data."""
+
 
 def generate_clinical_rationale(patient_summary: str):
 
@@ -66,12 +56,13 @@ def generate_clinical_rationale(patient_summary: str):
     llm = ChatGroq(
         api_key=GROQ_API_KEY,
         model_name="llama3-8b-8192",
-        temperature=0.2
+        temperature=0.2,
+        max_tokens=512
     )
 
     retriever = vectorstore.as_retriever(
         search_type="similarity",
-        search_kwargs={"k": 3}
+        search_kwargs={"k": 2}
     )
 
     # Retrieve and deduplicate by PMID
@@ -91,16 +82,17 @@ def generate_clinical_rationale(patient_summary: str):
                 "title": doc.metadata.get("title", "")
             })
 
-    # Truncate context to stay within token limit
+    # Hard cap on context length
     context = "\n\n".join([doc.page_content for doc in unique_docs])
-    if len(context) > 3000:
-        context = context[:3000]
+    context = context[:2000]
 
-    # Manually build prompt and call LLM directly
-    filled_prompt = PROMPT_TEMPLATE.replace("{question}", patient_summary).replace("{context}", context)
+    # Build and send prompt
+    filled_prompt = PROMPT_TEMPLATE.format(
+        question=patient_summary.strip(),
+        context=context
+    )
 
-    from langchain.schema import HumanMessage
-    response = llm([HumanMessage(content=filled_prompt)])
+    response = llm.invoke([HumanMessage(content=filled_prompt)])
     result = response.content
 
     return result, sources
