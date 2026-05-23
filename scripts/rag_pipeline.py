@@ -55,7 +55,7 @@ def generate_clinical_rationale(patient_summary: str):
 
     llm = ChatGroq(
         api_key=GROQ_API_KEY,
-        model_name="llama3-8b-8192",
+        model_name="llama-3.3-70b-versatile",
         temperature=0.2,
         max_tokens=512
     )
