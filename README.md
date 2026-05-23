@@ -144,7 +144,7 @@ Logistic Regression, Random Forest, XGBoost, Gradient Boosting, and AdaBoost wer
 
 ## What Differentiates This Project
 
-**Dual literature gap:** This is the first ML model predicting CNS-specific ADRs in TB patients from patient-level EHR features. Prior work on this dataset focused on hepatotoxicity, not neurological outcomes.
+**Dual literature gap:** This is a novel ML model predicting CNS-specific ADRs in TB patients from patient-level EHR features. Prior work on this dataset focused on hepatotoxicity, not neurological outcomes.
 
 **Patient-level features:** Most existing neurological ADR models rely on drug properties. This system uses clinical variables that are directly available in patient records, so it's actionable without drug-level data infrastructure.
 
@@ -152,7 +152,7 @@ Logistic Regression, Random Forest, XGBoost, Gradient Boosting, and AdaBoost wer
 
 **Rigorous validation on small data:** Three-method convergence at AUC 0.951 on 311 patients. The validation approach was specifically chosen to address the small cohort constraint rather than paper over it.
 
-**Recall-optimised design:** The model architecture reflects clinical priorities. Benchmark metrics come second.
+**Recall-optimised design:** The model architecture reflects clinical priorities, where minimizing dangerous false negatives takes precedence over traditional accuracy benchmarks.
 
 ---
 
