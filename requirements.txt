@@ -1,21 +1,24 @@
 streamlit
 pandas
-scikit-learn
 numpy
+scikit-learn
 xgboost
 
 langchain
 langchain-community
 langchain-core
+langchain-groq
 
 faiss-cpu
 
 sentence-transformers
 transformers
-torch
+
+torch==2.1.2
 
 groq
 
 biopython
-
 python-dotenv
+
+pickle-mixin
